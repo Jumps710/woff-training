@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日報入力 WOFF アプリ</title>
+  
+  <!-- プレミアムなデザインのためのGoogle Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-color: #00B900; /* LINE WORKS Green */
+      --primary-dark: #009900;
+      --bg-color: #f5f7f9;
+      --card-bg: #ffffff;
+      --text-main: #333333;
+      --text-sub: #777777;
+      --border-color: #e1e4e8;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 20px;
+      line-height: 1.5;
+    }
+    
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border: 1px solid var(--border-color);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    
+    .header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+    
+    .welcome-message {
+      font-size: 14px;
+      color: var(--text-sub);
+      background-color: #f0fdf4;
+      padding: 10px;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary-color);
+      display: none; /* woff初期化後に表示 */
+      margin-bottom: 20px;
+      text-align: left;
+      font-weight: 500;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-main);
+    }
+    
+    input[type="text"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      font-size: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: #fcfcfc;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      background-color: #fff;
+      box-shadow: 0 0 0 3px rgba(0, 185, 0, 0.1);
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .time-row {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .time-row .form-group {
+      flex: 1;
+    }
+    
+    button.submit-btn {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+    
+    button.submit-btn:hover {
+      background-color: var(--primary-dark);
+    }
+    
+    button.submit-btn:disabled {
+      background-color: #a5d6a7;
+      cursor: not-allowed;
+    }
+    
+    /* ローディングオーバーレイ */
+    #loading {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+  </style>
+
+  <!-- WOFF SDK -->
+  <script src="https://static.worksmobile.net/static/wm/woff/edge/3.6/sdk.js"></script>
+</head>
+<body>
+
+  <!-- ローディング表示 -->
+  <div id="loading">WOFF 初期化中...</div>
+
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>日報入力</h1>
+        <p style="font-size: 13px; color: var(--text-sub);">作業の実績を報告してください</p>
+      </div>
+      
+      <div id="welcome-message" class="welcome-message">
+        <!-- JSで文言を挿入 -->
+      </div>
+      
+      <form id="report-form">
+        <div class="form-group">
+          <label for="worker">作業者</label>
+          <input type="text" id="worker" name="worker" readonly placeholder="氏名を取得中...">
+        </div>
+        
+        <div class="form-group">
+          <label for="date">日付</label>
+          <input type="date" id="date" name="date" required>
+        </div>
+        
+        <div class="time-row">
+          <div class="form-group">
+            <label for="start">開始時間</label>
+            <input type="time" id="start" name="start" required>
+          </div>
+          <div class="form-group">
+            <label for="end">終了時間</label>
+            <input type="time" id="end" name="end" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="category">作業区分</label>
+          <select id="category" name="category" required>
+            <option value="" disabled selected>選択してください</option>
+            <option value="準備">準備</option>
+            <option value="加工・製造">加工・製造</option>
+            <option value="検査">検査</option>
+            <option value="清掃・片付け">清掃・片付け</option>
+            <option value="その他">その他</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="detail">作業内容詳細</label>
+          <textarea id="detail" name="detail" placeholder="本日の作業内容を具体的に記入してください" required></textarea>
+        </div>
+        
+        <button type="submit" id="submit-btn" class="submit-btn">日報を申請して閉じる</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ======================================
+    // ハンズオン環境設定
+    // ======================================
+    // WOFF ID（Developer Consoleで発行したもの）
+    const WOFF_ID = 'YOUR_WOFF_ID'; 
+    // GASのWebアプリURL（デプロイ後に取得したもの）
+    const GAS_WEBAPP_URL = 'YOUR_GAS_WEBAPP_URL';
+    // ======================================
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // 日付の初期値を今日にセット
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('date').value = today;
+
+      // WOFF初期化
+      initWoff();
+    });
+
+    function initWoff() {
+      woff.init({ woffId: WOFF_ID }).then(() => {
+        // 初期化成功後
+        woff.ready.then(() => {
+          document.getElementById('loading').style.display = 'none'; // ローディング非表示
+          
+          if (woff.isLoggedIn()) {
+            // プロフィール取得
+            woff.getProfile().then(profile => {
+              const name = profile.displayName;
+              
+              // ウェルカムメッセージの表示
+              const welcomeEl = document.getElementById('welcome-message');
+              welcomeEl.innerText = `ようこそ ${name} さん、お疲れ様です。`;
+              welcomeEl.style.display = 'block';
+              
+              // 作業者名を入力欄にセット
+              document.getElementById('worker').value = name;
+            }).catch((err) => {
+              console.error('getProfile Error:', err);
+              document.getElementById('worker').value = '取得エラー';
+            });
+          } else {
+            woff.login();
+          }
+        });
+      }).catch((err) => {
+        console.error('WOFF Init Error:', err);
+        // エラー時もとりあえずフォームは表示させるためローディングを消す（ハンズオン用）
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('welcome-message').innerText = '※ブラウザ(非WOFF環境)でテスト表示しています。';
+        document.getElementById('welcome-message').style.display = 'block';
+        document.getElementById('worker').removeAttribute('readonly');
+        document.getElementById('worker').placeholder = '手動で入力してください';
+      });
+    }
+
+    // フォーム送信アクション
+    document.getElementById('report-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerText = '送信中...';
+
+      const formData = {
+        type: 'frontend_submit',
+        worker: document.getElementById('worker').value,
+        date: document.getElementById('date').value,
+        start: document.getElementById('start').value,
+        end: document.getElementById('end').value,
+        category: document.getElementById('category').value,
+        detail: document.getElementById('detail').value
+      };
+
+      // GASへ送信
+      // CORS回避のため text/plain で送信
+      fetch(GAS_WEBAPP_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain'
+        },
+        body: JSON.stringify(formData)
+      })
+      .then(response => response.text())
+      .then(result => {
+        alert('日報を申請しました！');
+        // WOFFアプリを閉じる
+        if (typeof woff !== 'undefined' && woff.isInClient && woff.isInClient()) {
+          woff.closeWindow();
+        } else {
+            submitBtn.innerText = '送信完了';
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('送信に失敗しました。詳細：' + error);
+        submitBtn.disabled = false;
+        submitBtn.innerText = '日報を申請して閉じる';
+      });
+    });
+  </script>
+</body>
+</html>
